@@ -1,6 +1,17 @@
 # R1 Garage
 
+[![Latest Release](https://img.shields.io/github/v/release/hbirring01/R1Garage?include_prereleases&sort=semver&label=release&color=0B57D0)](https://github.com/hbirring01/R1Garage/releases/latest)
+[![Release Date](https://img.shields.io/github/release-date/hbirring01/R1Garage?color=0B57D0)](https://github.com/hbirring01/R1Garage/releases/latest)
+[![APK Downloads](https://img.shields.io/github/downloads/hbirring01/R1Garage/total?color=0B57D0&label=APK%20downloads)](https://github.com/hbirring01/R1Garage/releases)
+[![Android CI](https://github.com/hbirring01/R1Garage/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/hbirring01/R1Garage/actions/workflows/android.yml)
+[![CodeQL](https://github.com/hbirring01/R1Garage/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/hbirring01/R1Garage/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hbirring01/R1Garage/badge)](https://scorecard.dev/viewer/?uri=github.com/hbirring01/R1Garage)
+
 Personal ownership dashboard for the Rivian R1S (Android).
+
+<!-- LATEST_RELEASE:START -->
+_No release published yet. Run `git tag v0.1.0 && git push origin v0.1.0` to cut the first one._
+<!-- LATEST_RELEASE:END -->
 
 Four pillars:
 
