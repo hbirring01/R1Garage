@@ -1,0 +1,162 @@
+name: Release APK
+
+# Builds a release APK and publishes it as a GitHub Release asset when a
+# vX.Y.Z tag is pushed (typically by release-please).
+#
+# NOTE: This project does not yet have a stable upgrade keystore. The
+# release APK is signed with the AGP-generated debug key, which is fine
+# for personal sideload but means signatures will not match across
+# machines. To switch to a stable key, add a `signingConfigs` block to
+# app/build.gradle.kts driven by local.properties / env vars (mirror the
+# pattern used in the sibling CreditCardApp), then add the
+# SIGNING_KEYSTORE_BASE64 / SIGNING_STORE_PASSWORD / SIGNING_KEY_PASSWORD
+# secrets and re-enable the keystore-decode step below.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  # attest-build-provenance needs id-token (Sigstore OIDC) + attestations.
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Compute versionCode / versionName from tag
+        id: ver
+        run: |
+          TAG="${{ github.ref_name }}"          # e.g. v1.2.3
+          VERSION_NAME="${TAG#v}"               # 1.2.3
+          IFS='.' read -r MAJ MIN PAT <<< "$VERSION_NAME"
+          MAJ=${MAJ:-0}; MIN=${MIN:-0}; PAT=${PAT:-0}
+          VERSION_CODE=$(( MAJ * 10000 + MIN * 100 + PAT ))
+          echo "name=$VERSION_NAME"  >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE"  >> "$GITHUB_OUTPUT"
+          echo "Resolved versionName=$VERSION_NAME versionCode=$VERSION_CODE"
+
+      - name: Assemble release APK
+        # Falls back to AGP's debug-key auto-signing because no upgrade
+        # signingConfig is wired up yet. See header comment.
+        run: ./gradlew assembleRelease
+        env:
+          RELEASE_VERSION_NAME: ${{ steps.ver.outputs.name }}
+          RELEASE_VERSION_CODE: ${{ steps.ver.outputs.code }}
+
+      - name: Rename APK
+        id: apk
+        run: |
+          mkdir -p artifacts
+          # AGP names the unsigned variant app-release-unsigned.apk; the
+          # debug-key auto-signed variant is just app-release.apk. Prefer
+          # whichever exists.
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            SRC=app/build/outputs/apk/release/app-release.apk
+          else
+            SRC=app/build/outputs/apk/release/app-release-unsigned.apk
+          fi
+          APK="artifacts/R1Garage-${{ github.ref_name }}.apk"
+          cp "$SRC" "$APK"
+          SIZE=$(du -h "$APK" | cut -f1)
+          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+
+      # SLSA build provenance: publishes a signed attestation to Sigstore
+      # tying this APK's sha256 to this workflow run + commit.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: ${{ steps.apk.outputs.path }}
+
+      - name: Build changelog from commits
+        id: changelog
+        run: |
+          set -e
+          TAG="${{ github.ref_name }}"
+          PREV=$(git tag --sort=-creatordate | grep -E '^v[0-9]' | grep -v "^${TAG}$" | head -n 1 || true)
+          if [ -z "$PREV" ]; then
+            RANGE="HEAD"
+            COMPARE=""
+          else
+            RANGE="${PREV}..HEAD"
+            COMPARE="https://github.com/${{ github.repository }}/compare/${PREV}...${TAG}"
+          fi
+          echo "Computing changelog for range: $RANGE"
+
+          feats=$(git log --no-merges --pretty=format:'- %s (%h)' $RANGE | grep -iE '^- (feat|feature)(\(.*\))?:' || true)
+          fixes=$(git log --no-merges --pretty=format:'- %s (%h)' $RANGE | grep -iE '^- fix(\(.*\))?:' || true)
+          ui=$(git log --no-merges --pretty=format:'- %s (%h)' $RANGE | grep -iE '^- (ui|ux|style)(\(.*\))?:' || true)
+          perf=$(git log --no-merges --pretty=format:'- %s (%h)' $RANGE | grep -iE '^- perf(\(.*\))?:' || true)
+          docs=$(git log --no-merges --pretty=format:'- %s (%h)' $RANGE | grep -iE '^- docs?(\(.*\))?:' || true)
+          chore=$(git log --no-merges --pretty=format:'- %s (%h)' $RANGE | grep -iE '^- (chore|refactor|build|ci|test|deps)(\(.*\))?:' || true)
+          other=$(git log --no-merges --pretty=format:'- %s (%h)' $RANGE \
+            | grep -ivE '^- (feat|feature|fix|ui|ux|style|perf|docs?|chore|refactor|build|ci|test|deps)(\(.*\))?:' || true)
+
+          {
+            echo "## 📦 R1 Garage ${TAG}"
+            echo ""
+            echo "### 📲 Install"
+            echo "Download **R1Garage-${TAG}.apk** from the Assets below and install on your Android device."
+            echo "- Min Android: 8.0 (API 26)"
+            echo "- Size: ${{ steps.apk.outputs.size }}"
+            echo "- SHA-256: \`${{ steps.apk.outputs.sha256 }}\`"
+            echo ""
+            echo "> ⚠️ This APK is currently signed with the AGP debug key. Installing over a previous release built on a different machine will require an uninstall first."
+            echo ""
+            echo "### ✨ What's Changed"
+            [ -n "$feats" ]  && { echo ""; echo "#### 🚀 Features";        echo "$feats"; }
+            [ -n "$fixes" ]  && { echo ""; echo "#### 🐛 Bug Fixes";       echo "$fixes"; }
+            [ -n "$ui" ]     && { echo ""; echo "#### 🎨 UI / UX";          echo "$ui"; }
+            [ -n "$perf" ]   && { echo ""; echo "#### ⚡ Performance";      echo "$perf"; }
+            [ -n "$docs" ]   && { echo ""; echo "#### 📚 Documentation";    echo "$docs"; }
+            [ -n "$chore" ]  && { echo ""; echo "#### 🧰 Maintenance";      echo "$chore"; }
+            [ -n "$other" ]  && { echo ""; echo "#### 📝 Other";            echo "$other"; }
+            echo ""
+            if [ -n "$COMPARE" ]; then
+              echo "**Full Diff:** [\`${PREV}...${TAG}\`](${COMPARE})"
+              echo ""
+            fi
+            echo "---"
+          } > RELEASE_NOTES.md
+
+          echo "----- Generated notes -----"
+          cat RELEASE_NOTES.md
+
+      - name: Create GitHub Release and upload APK
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        with:
+          name: R1 Garage ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: artifacts/*.apk
