@@ -27,9 +27,10 @@ class GarageViewModel @Inject constructor(
 
     val state: StateFlow<GarageUiState> =
         combine(modDao.observeAll(), repository.latestSnapshot) { mods, snap ->
+            val odo = snap?.odometerMi
             GarageUiState(
-                odometerMi = snap?.odometerMi,
-                nextServiceLabel = snap?.let { nextService(it.odometerMi) },
+                odometerMi = odo,
+                nextServiceLabel = odo?.let { nextService(it) },
                 openRecalls = 0,
                 mods = mods,
             )

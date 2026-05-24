@@ -1,0 +1,39 @@
+name: Gradle Dependency Submission
+
+# Resolves Gradle dependencies and submits them to GitHub's Dependency Graph
+# so Dependabot alerts, dependency-review on PRs, and OSSF Scorecard's
+# Vulnerabilities check have data to work with.
+#
+# Runs on pushes to main + weekly. Does NOT run on PRs (the action only
+# writes; reads happen via the dependency-review action in android.yml).
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Submit Gradle dependency graph
+        uses: gradle/actions/dependency-submission@v6
+        with:
+          dependency-graph: generate-and-submit
