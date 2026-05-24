@@ -82,10 +82,6 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Advisory until the Gradle dependency graph is populated by the
-    # `gradle-dependency-submission.yml` workflow on main. Once main has
-    # a graph snapshot, switch this back to a required check.
-    continue-on-error: true
     permissions:
       contents: read
       pull-requests: write
