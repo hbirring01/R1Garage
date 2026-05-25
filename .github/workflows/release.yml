@@ -95,7 +95,7 @@ jobs:
       # SLSA build provenance: publishes a signed attestation to Sigstore
       # tying this APK's sha256 to this workflow run + commit.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: ${{ steps.apk.outputs.path }}
 
