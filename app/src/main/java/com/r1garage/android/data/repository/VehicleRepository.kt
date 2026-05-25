@@ -10,13 +10,13 @@ import com.r1garage.android.data.rivian.RivianQueries
 import com.r1garage.android.data.rivian.VehicleStateData
 import com.r1garage.android.data.rivian.VehicleStateDto
 import com.r1garage.android.domain.model.VehicleSnapshot
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class VehicleRepository @Inject constructor(

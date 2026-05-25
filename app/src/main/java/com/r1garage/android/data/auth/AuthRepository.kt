@@ -9,8 +9,6 @@ import com.r1garage.android.data.rivian.RivianAuthApi
 import com.r1garage.android.data.rivian.RivianAuthQueries
 import com.r1garage.android.data.rivian.RivianTokenStore
 import com.r1garage.android.work.VehiclePollScheduler
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +16,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Drives the [AuthState] machine and persists tokens via [RivianTokenStore].

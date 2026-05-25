@@ -5,13 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.r1garage.android.data.auth.AuthRepository
 import com.r1garage.android.data.auth.AuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
