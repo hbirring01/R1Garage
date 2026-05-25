@@ -2,11 +2,14 @@ package com.r1garage.android.ui.garage
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.r1garage.android.data.local.Mod
+import com.r1garage.android.ui.auth.AuthViewModel
 import com.r1garage.android.ui.components.ScreenScaffold
 import com.r1garage.android.ui.components.StatCard
 import com.r1garage.android.ui.drive.EmptyHint
@@ -22,7 +26,10 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun GarageScreen(viewModel: GarageViewModel = hiltViewModel()) {
+fun GarageScreen(
+    viewModel: GarageViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     ScreenScaffold(
         title = "Garage",
@@ -48,6 +55,14 @@ fun GarageScreen(viewModel: GarageViewModel = hiltViewModel()) {
                 EmptyHint("Track lifts, wheels, lights, accessories, and software updates here.")
             } else {
                 state.mods.forEach { ModRow(it) }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            OutlinedButton(
+                onClick = { authViewModel.signOut() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Sign out")
             }
         }
     }

@@ -6,10 +6,12 @@ import okhttp3.Interceptor
 import okhttp3.Response
 
 /**
- * Adds the standard Rivian GraphQL gateway headers. Headers names taken from
- * the published unofficial-API community work (kaedea/rivian-api, bretterer/
- * rivian-python-api). If you don't have a session yet the calls will return
- * an auth error and the UI will prompt to sign in.
+ * Adds the standard Rivian GraphQL gateway headers. Header names taken from
+ * the published unofficial-API community work (bretterer/rivian-python-api,
+ * the apollographql client name comes from the iOS app's bundle).
+ *
+ * Headers are only added if the corresponding token is present, which is
+ * what makes the unauthenticated CSRF-bootstrap call work transparently.
  */
 @Singleton
 class RivianAuthInterceptor @Inject constructor(
@@ -25,7 +27,7 @@ class RivianAuthInterceptor @Inject constructor(
 
         tokenStore.csrfToken?.let { builder.header("Csrf-Token", it) }
         tokenStore.appSessionToken?.let { builder.header("A-Sess", it) }
-        tokenStore.accessToken?.let { builder.header("U-Sess", it) }
+        tokenStore.userSessionToken?.let { builder.header("U-Sess", it) }
 
         return chain.proceed(builder.build())
     }

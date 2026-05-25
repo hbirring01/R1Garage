@@ -27,9 +27,8 @@ class VehiclePollWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val token = tokenStore.accessToken
         val vehicleId = inputData.getString(KEY_VEHICLE_ID) ?: VEHICLE_ID_PLACEHOLDER
-        if (token.isNullOrBlank() || vehicleId == VEHICLE_ID_PLACEHOLDER) {
+        if (!tokenStore.isSignedIn || vehicleId == VEHICLE_ID_PLACEHOLDER) {
             // Not signed in yet — treat as soft success so WorkManager doesn't
             // back off. The UI will show "Not signed in" until the user logs in.
             return Result.success()

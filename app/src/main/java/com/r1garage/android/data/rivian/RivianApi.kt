@@ -1,21 +1,18 @@
 package com.r1garage.android.data.rivian
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import retrofit2.http.Body
 import retrofit2.http.POST
 
 /**
- * Rivian's consumer endpoint is a GraphQL gateway. We send raw GraphQL
- * payloads as JSON; the schema/queries are reverse-engineered from the
- * community-maintained unofficial-API repos.
+ * Rivian's consumer endpoint is a GraphQL gateway. The signed-in queries
+ * (vehicle state, vehicle list, charging history) live here.
  *
  * Base URL: https://rivian.com/api/gql/consumer/
  *
- * IMPORTANT: This is an unofficial endpoint. Authentication (login,
- * MFA, OTP) is intentionally NOT wired up in the scaffold — implement it
- * once you've decided how to handle the OTP/CAPTCHA challenges. Until
- * then the poller will record an auth-error alert and keep the dashboard
- * in "Not signed in" state.
+ * Auth tokens (Csrf-Token / A-Sess / U-Sess) are attached by
+ * [RivianAuthInterceptor]; this interface stays pure transport.
  */
 interface RivianApi {
 
@@ -27,17 +24,19 @@ interface RivianApi {
 data class GraphQlRequest(
     val operationName: String,
     val query: String,
-    val variables: Map<String, String> = emptyMap(),
+    val variables: JsonElement,
 )
 
 @Serializable
 data class GraphQlResponse(
-    val data: VehicleStateData? = null,
+    val data: JsonElement? = null,
     val errors: List<GraphQlError>? = null,
 )
 
 @Serializable
 data class GraphQlError(val message: String)
+
+// --- Vehicle state response shapes --------------------------------------
 
 @Serializable
 data class VehicleStateData(val vehicleState: VehicleStateDto? = null)

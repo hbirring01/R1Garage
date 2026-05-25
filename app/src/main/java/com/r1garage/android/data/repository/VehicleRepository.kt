@@ -2,15 +2,20 @@ package com.r1garage.android.data.repository
 
 import com.r1garage.android.data.local.VehicleSnapshotDao
 import com.r1garage.android.data.local.VehicleSnapshotEntity
+import com.r1garage.android.data.rivian.AuthDtosJson
 import com.r1garage.android.data.rivian.GraphQlRequest
 import com.r1garage.android.data.rivian.RivianApi
 import com.r1garage.android.data.rivian.RivianQueries
+import com.r1garage.android.data.rivian.VehicleStateData
 import com.r1garage.android.data.rivian.VehicleStateDto
 import com.r1garage.android.domain.model.VehicleSnapshot
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 
 @Singleton
 class VehicleRepository @Inject constructor(
@@ -30,13 +35,17 @@ class VehicleRepository @Inject constructor(
             GraphQlRequest(
                 operationName = "GetVehicleState",
                 query = RivianQueries.GET_VEHICLE_STATE,
-                variables = mapOf("vehicleID" to vehicleId),
+                variables = buildJsonObject {
+                    put("vehicleID", JsonPrimitive(vehicleId))
+                }
             )
         )
-        val state = response.data?.vehicleState
-            ?: throw IllegalStateException(
-                response.errors?.joinToString { it.message } ?: "no vehicleState in response"
-            )
+        response.errors?.firstOrNull()?.let {
+            throw IllegalStateException(it.message)
+        }
+        val data = response.data ?: throw IllegalStateException("no data in response")
+        val state = AuthDtosJson.decodeFromJsonElement<VehicleStateData>(data).vehicleState
+            ?: throw IllegalStateException("no vehicleState in response")
         snapshotDao.insert(state.toEntity(System.currentTimeMillis()))
         // Keep ~30 days of history. The poller runs every 15 min by default
         // so this caps the table around 3k rows.
