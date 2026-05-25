@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/hbirring01/R1Garage/compare/v0.1.1...v0.1.2) (2026-05-25)
+
+
+### Bug Fixes
+
+* **build:** sign release APK with stable upgrade keystore ([#11](https://github.com/hbirring01/R1Garage/issues/11)) ([5a588d1](https://github.com/hbirring01/R1Garage/commit/5a588d11cc964e894e055251108173341c34c2fb))
+
 ## [0.1.1](https://github.com/hbirring01/R1Garage/compare/v0.1.0...v0.1.1) (2026-05-25)
 
 
