@@ -7,6 +7,8 @@ import androidx.work.WorkerParameters
 import com.r1garage.android.data.local.AlertEvent
 import com.r1garage.android.data.local.AlertEventDao
 import com.r1garage.android.data.local.VehicleSnapshotDao
+import com.r1garage.android.data.local.VehicleSnapshotEntity
+import com.r1garage.android.data.preferences.PreferencesRepository
 import com.r1garage.android.data.repository.VehicleRepository
 import com.r1garage.android.data.rivian.RivianTokenStore
 import dagger.assisted.Assisted
@@ -17,7 +19,7 @@ import java.util.concurrent.TimeUnit
  * Polls the Rivian API for the latest vehicle state.
  *
  * **12 V battery safety contract — DO NOT VIOLATE:**
- *  - This worker calls ONLY `VehicleRepository.refresh`, which issues the
+ *  - This worker calls ONLY [VehicleRepository.refresh], which issues the
  *    read-only `vehicleState` GraphQL query against the consumer endpoint.
  *  - `vehicleState` returns cached telemetry held by Rivian's cloud; the
  *    cloud is populated by pushes FROM the vehicle while it is already
@@ -28,10 +30,20 @@ import java.util.concurrent.TimeUnit
  *    `getLiveSessionData` endpoint, and any command mutation
  *    (`sendVehicleCommand`, lock/unlock, precondition, etc.).
  *
- * Throttle: when the last snapshot says the car is parked AND not actively
- * charging AND was fetched < [QUIESCENT_THROTTLE_MS] ago, skip the network
- * call this tick. WorkManager fires every ~15 min minimum; this collapses
- * us to roughly one network read per hour while the car is idle.
+ * **Adaptive cadence** (decisions based on the last snapshot's `power_state`,
+ * `gear`, and charger fields — see [Activity]):
+ *  - DRIVING (gear != park, powerState `ready`/`go`/`drive`): poll every tick
+ *    (~15 min, the WorkManager floor) to keep the live dashboard fresh.
+ *  - CHARGING (chargerState contains `charging`): poll every tick so the
+ *    charge-session detector sees both endpoints of the curve.
+ *  - QUIESCENT (parked & not charging; powerState `sleep`/`standby`/null):
+ *    skip the network call if the last snapshot is younger than the
+ *    quiescent throttle. Window depends on user preference:
+ *      - Low-power mode OFF (default): [QUIESCENT_THROTTLE_NORMAL_MS] (~55 min)
+ *      - Low-power mode ON: [QUIESCENT_THROTTLE_LOW_POWER_MS] (~4 h)
+ *
+ * Either way this only affects phone-side battery / data use — the vehicle
+ * is never contacted.
  */
 @HiltWorker
 class VehiclePollWorker @AssistedInject constructor(
@@ -41,6 +53,7 @@ class VehiclePollWorker @AssistedInject constructor(
     private val tokenStore: RivianTokenStore,
     private val alertDao: AlertEventDao,
     private val snapshotDao: VehicleSnapshotDao,
+    private val preferences: PreferencesRepository,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
@@ -51,13 +64,8 @@ class VehiclePollWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        // Adaptive throttle: when the car is quiescent (parked & not actively
-        // charging) and we already have a recent snapshot, skip the network
-        // call. Saves phone battery / data; does not affect the vehicle.
         val last = snapshotDao.latest()
-        if (last != null && last.isQuiescent() &&
-            System.currentTimeMillis() - last.fetchedAt < QUIESCENT_THROTTLE_MS
-        ) {
+        if (last != null && shouldSkip(last, preferences.lowPowerModeOnce())) {
             return Result.success()
         }
 
@@ -76,19 +84,40 @@ class VehiclePollWorker @AssistedInject constructor(
         }
     }
 
-    private fun com.r1garage.android.data.local.VehicleSnapshotEntity.isQuiescent(): Boolean {
-        val parked = gear == null || gear.equals("park", ignoreCase = true)
-        val notCharging = plugState == null ||
-            !plugState.equals("charging_active", ignoreCase = true) &&
-            !plugState.contains("charging", ignoreCase = true)
-        return parked && notCharging
+    private fun shouldSkip(last: VehicleSnapshotEntity, lowPowerMode: Boolean): Boolean {
+        val age = System.currentTimeMillis() - last.fetchedAt
+        return when (last.classify()) {
+            Activity.Driving, Activity.Charging -> false
+            Activity.Quiescent -> {
+                val window = if (lowPowerMode) {
+                    QUIESCENT_THROTTLE_LOW_POWER_MS
+                } else {
+                    QUIESCENT_THROTTLE_NORMAL_MS
+                }
+                age < window
+            }
+        }
+    }
+
+    enum class Activity { Driving, Charging, Quiescent }
+
+    private fun VehicleSnapshotEntity.classify(): Activity {
+        val driving = gear?.equals("park", ignoreCase = true) == false ||
+            powerState?.lowercase() in setOf("ready", "go", "drive")
+        if (driving) return Activity.Driving
+        val charging = plugState?.contains("charging", ignoreCase = true) == true
+        if (charging) return Activity.Charging
+        return Activity.Quiescent
     }
 
     companion object {
         const val KEY_VEHICLE_ID = "vehicle_id"
         const val VEHICLE_ID_PLACEHOLDER = "<unset>"
 
-        /** Skip network polls when quiescent if last fetch was within this window. */
-        private val QUIESCENT_THROTTLE_MS = TimeUnit.MINUTES.toMillis(55)
+        /** Default throttle while parked + unplugged. */
+        private val QUIESCENT_THROTTLE_NORMAL_MS = TimeUnit.MINUTES.toMillis(55)
+
+        /** Low-power-mode throttle. ~4 h between idle polls. */
+        private val QUIESCENT_THROTTLE_LOW_POWER_MS = TimeUnit.HOURS.toMillis(4)
     }
 }

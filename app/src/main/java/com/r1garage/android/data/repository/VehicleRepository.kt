@@ -1,5 +1,6 @@
 package com.r1garage.android.data.repository
 
+import com.r1garage.android.data.detector.SessionDetector
 import com.r1garage.android.data.local.VehicleSnapshotDao
 import com.r1garage.android.data.local.VehicleSnapshotEntity
 import com.r1garage.android.data.rivian.AuthDtosJson
@@ -21,6 +22,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 class VehicleRepository @Inject constructor(
     private val api: RivianApi,
     private val snapshotDao: VehicleSnapshotDao,
+    private val sessionDetector: SessionDetector,
 ) {
     val latestSnapshot: Flow<VehicleSnapshot?> =
         snapshotDao.observeLatest().map { it?.toDomain() }
@@ -47,9 +49,23 @@ class VehicleRepository @Inject constructor(
         val state = AuthDtosJson.decodeFromJsonElement<VehicleStateData>(data).vehicleState
             ?: throw IllegalStateException("no vehicleState in response")
         snapshotDao.insert(state.toEntity(System.currentTimeMillis()))
+
+        // Run trip / charge session detection against the snapshot we just
+        // inserted. Worst case the detector no-ops; it never wakes the car.
+        sessionDetector.onNewSnapshot(snapshotDao.recent(SESSION_LOOKBACK))
+
         // Keep ~30 days of history. The poller runs every 15 min by default
         // so this caps the table around 3k rows.
         snapshotDao.pruneOlderThan(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000)
+    }
+
+    companion object {
+        /**
+         * How many recent snapshots to hand to the [SessionDetector]. Even
+         * with a 4 h low-power throttle, 96 snapshots covers >24 h — plenty
+         * for finding session boundaries.
+         */
+        private const val SESSION_LOOKBACK = 96
     }
 }
 
@@ -66,6 +82,7 @@ private fun VehicleStateDto.toEntity(now: Long) = VehicleSnapshotEntity(
     lat = gnssLocation?.latitude,
     lon = gnssLocation?.longitude,
     twelveVolt = twelveVoltBatteryHealth?.value?.toDoubleOrNull(),
+    powerState = powerState?.value,
 )
 
 private fun VehicleSnapshotEntity.toDomain() = VehicleSnapshot(
