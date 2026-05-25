@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -17,6 +19,16 @@ run {
     if (override != null) layout.buildDirectory.set(file(override))
 }
 
+// Read signing configuration from local.properties (dev) or env vars (CI).
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun localProp(name: String, default: String = "") =
+    (localProps.getProperty(name) ?: System.getenv(name) ?: default)
+        .trim()
+        .trim('"', '\'')
+
 android {
     namespace = "com.r1garage.android"
     compileSdk = 36
@@ -32,13 +44,33 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    // Stable upgrade keystore: only created when SIGNING_STORE_PASSWORD is
+    // provided (via local.properties or CI env). When absent (fork PRs,
+    // fresh clones), the release buildType falls back to AGP's debug key
+    // so the project still builds.
+    signingConfigs {
+        val storePwd = localProp("SIGNING_STORE_PASSWORD")
+        if (storePwd.isNotEmpty()) {
+            create("upgrade") {
+                storeFile = file(localProp("SIGNING_STORE_FILE", "upgrade.keystore"))
+                storePassword = storePwd
+                keyAlias = localProp("SIGNING_KEY_ALIAS", "upgrade")
+                keyPassword = localProp("SIGNING_KEY_PASSWORD")
+                storeType = "PKCS12"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
+            signingConfig = signingConfigs.findByName("upgrade")
+                ?: signingConfigs.getByName("debug")
         }
         debug {
             isMinifyEnabled = false
+            signingConfigs.findByName("upgrade")?.let { signingConfig = it }
         }
     }
 
