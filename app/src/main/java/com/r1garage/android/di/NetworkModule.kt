@@ -1,6 +1,7 @@
 package com.r1garage.android.di
 
 import com.r1garage.android.data.rivian.RivianApi
+import com.r1garage.android.data.rivian.RivianAuthApi
 import com.r1garage.android.data.rivian.RivianAuthInterceptor
 import dagger.Module
 import dagger.Provides
@@ -19,7 +20,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val RIVIAN_BASE_URL = "https://rivian.com/api/gql/consumer/"
+    private const val RIVIAN_CONSUMER_URL = "https://rivian.com/api/gql/consumer/"
+    private const val RIVIAN_GATEWAY_URL = "https://rivian.com/api/gql/gateway/"
 
     @Provides
     @Singleton
@@ -47,10 +49,22 @@ object NetworkModule {
     fun provideRivianApi(client: OkHttpClient, json: Json): RivianApi {
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
-            .baseUrl(RIVIAN_BASE_URL)
+            .baseUrl(RIVIAN_CONSUMER_URL)
             .client(client)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
             .create(RivianApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRivianAuthApi(client: OkHttpClient, json: Json): RivianAuthApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl(RIVIAN_GATEWAY_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(RivianAuthApi::class.java)
     }
 }

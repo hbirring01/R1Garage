@@ -1,90 +1,53 @@
 package com.r1garage.android.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import com.r1garage.android.data.preferences.ThemeMode
 
-private val LightColors = lightColorScheme(
-    primary = Primary,
-    onPrimary = OnPrimary,
-    primaryContainer = PrimaryContainer,
-    onPrimaryContainer = OnPrimaryContainer,
-    secondary = Secondary,
-    onSecondary = OnSecondary,
-    secondaryContainer = SecondaryContainer,
-    onSecondaryContainer = OnSecondaryContainer,
-    tertiary = Tertiary,
-    onTertiary = OnTertiary,
-    tertiaryContainer = TertiaryContainer,
-    onTertiaryContainer = OnTertiaryContainer,
-    background = Background,
-    onBackground = OnBackground,
-    surface = SurfaceL,
-    onSurface = OnSurface,
-    surfaceVariant = SurfaceVariant,
-    onSurfaceVariant = OnSurfaceVariant,
-    outline = Outline,
-    outlineVariant = OutlineVariant,
-    error = ErrorL,
-    onError = OnErrorL,
+private val RivianColors = darkColorScheme(
+    primary = RivianYellow,
+    onPrimary = RivianBlack,
+    primaryContainer = RivianYellowDim,
+    onPrimaryContainer = RivianBlack,
+    secondary = RivianTextPrimary,
+    onSecondary = RivianBlack,
+    secondaryContainer = RivianSurfaceHigh,
+    onSecondaryContainer = RivianTextPrimary,
+    tertiary = RivianYellow,
+    onTertiary = RivianBlack,
+    tertiaryContainer = RivianSurfaceHigh,
+    onTertiaryContainer = RivianTextPrimary,
+    background = RivianBlack,
+    onBackground = RivianTextPrimary,
+    surface = RivianAlmostBlack,
+    onSurface = RivianTextPrimary,
+    surfaceVariant = RivianSurface,
+    onSurfaceVariant = RivianTextSecondary,
+    surfaceContainer = RivianSurface,
+    surfaceContainerHigh = RivianSurfaceHigh,
+    surfaceContainerHighest = RivianSurfaceHighest,
+    surfaceContainerLow = RivianAlmostBlack,
+    surfaceContainerLowest = RivianBlack,
+    outline = RivianOutline,
+    outlineVariant = RivianOutlineDim,
+    error = RivianError,
+    onError = RivianBlack,
+    inverseSurface = RivianTextPrimary,
+    inverseOnSurface = RivianBlack,
+    inversePrimary = RivianYellowDim,
+    scrim = RivianBlack,
 )
 
-private val DarkColors = darkColorScheme(
-    primary = PrimaryDark,
-    onPrimary = OnPrimaryDark,
-    primaryContainer = PrimaryContainerDark,
-    onPrimaryContainer = OnPrimaryContainerDark,
-    secondary = SecondaryDark,
-    onSecondary = OnSecondaryDark,
-    secondaryContainer = SecondaryContainerDark,
-    onSecondaryContainer = OnSecondaryContainerDark,
-    tertiary = TertiaryDark,
-    onTertiary = OnTertiaryDark,
-    tertiaryContainer = TertiaryContainerDark,
-    onTertiaryContainer = OnTertiaryContainerDark,
-    background = BackgroundDark,
-    onBackground = OnBackgroundDark,
-    surface = SurfaceLDark,
-    onSurface = OnSurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = OnSurfaceVariantDark,
-    outline = OutlineDark,
-    outlineVariant = OutlineVariantDark,
-    error = ErrorDark,
-    onError = OnErrorDark,
-)
-
-@Composable
-private fun ThemeMode.resolveDark(): Boolean = when (this) {
-    ThemeMode.SYSTEM -> isSystemInDarkTheme()
-    ThemeMode.LIGHT -> false
-    ThemeMode.DARK -> true
-}
-
+/**
+ * Single, force-dark Rivian-inspired theme. Dynamic color is intentionally
+ * NOT used — the brand is the brand.
+ */
 @Composable
 fun R1GarageTheme(
-    themeMode: ThemeMode = ThemeMode.SYSTEM,
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val darkTheme = themeMode.resolveDark()
-    val scheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val ctx = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
-        }
-        darkTheme -> DarkColors
-        else -> LightColors
-    }
     MaterialTheme(
-        colorScheme = scheme,
+        colorScheme = RivianColors,
         typography = AppTypography,
         shapes = AppShapes,
         content = content,

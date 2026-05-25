@@ -19,6 +19,7 @@ import com.r1garage.android.ui.charge.ChargeScreen
 import com.r1garage.android.ui.drive.DriveScreen
 import com.r1garage.android.ui.garage.GarageScreen
 import com.r1garage.android.ui.home.HomeScreen
+import com.r1garage.android.ui.settings.SettingsScreen
 
 @Composable
 fun AppNavGraph() {
@@ -56,6 +57,7 @@ fun AppNavGraph() {
             composable(TopDestination.Charge.route) { ChargeScreen() }
             composable(TopDestination.Alerts.route) { AlertsScreen() }
             composable(TopDestination.Garage.route) { GarageScreen() }
+            composable(TopDestination.Settings.route) { SettingsScreen() }
         }
     }
 }

@@ -8,11 +8,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Encrypted on-device store for Rivian session tokens. Uses
- * androidx.security.crypto-backed shared preferences so the access token
- * never lands on disk in plain text. There is no Rivian-issued refresh
- * token on the public/unofficial endpoint, so we expose a single getter
- * and setter.
+ * Encrypted on-device store for Rivian session tokens.
+ *
+ * Header mapping for the consumer GraphQL gateway:
+ *  - `Csrf-Token`        ← [csrfToken]
+ *  - `A-Sess`            ← [appSessionToken]
+ *  - `U-Sess`            ← [userSessionToken]
+ *
+ * [accessToken] and [refreshToken] are returned by Rivian's login mutation
+ * but are not used as request headers themselves on the consumer GraphQL
+ * endpoint — they're kept here for a future silent-refresh flow.
+ *
+ * [userEmail] is kept because Rivian's OTP mutation requires re-sending it
+ * alongside the otpToken.
  */
 @Singleton
 class RivianTokenStore @Inject constructor(
@@ -30,10 +38,6 @@ class RivianTokenStore @Inject constructor(
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
 
-    var accessToken: String?
-        get() = prefs.getString(KEY_ACCESS, null)
-        set(value) { prefs.edit().putString(KEY_ACCESS, value).apply() }
-
     var csrfToken: String?
         get() = prefs.getString(KEY_CSRF, null)
         set(value) { prefs.edit().putString(KEY_CSRF, value).apply() }
@@ -42,11 +46,36 @@ class RivianTokenStore @Inject constructor(
         get() = prefs.getString(KEY_APP_SESSION, null)
         set(value) { prefs.edit().putString(KEY_APP_SESSION, value).apply() }
 
+    var userSessionToken: String?
+        get() = prefs.getString(KEY_USER_SESSION, null)
+        set(value) { prefs.edit().putString(KEY_USER_SESSION, value).apply() }
+
+    var accessToken: String?
+        get() = prefs.getString(KEY_ACCESS, null)
+        set(value) { prefs.edit().putString(KEY_ACCESS, value).apply() }
+
+    var refreshToken: String?
+        get() = prefs.getString(KEY_REFRESH, null)
+        set(value) { prefs.edit().putString(KEY_REFRESH, value).apply() }
+
+    var userEmail: String?
+        get() = prefs.getString(KEY_EMAIL, null)
+        set(value) { prefs.edit().putString(KEY_EMAIL, value).apply() }
+
+    /** True when we have enough tokens to make an authenticated consumer call. */
+    val isSignedIn: Boolean
+        get() = !userSessionToken.isNullOrBlank() &&
+            !appSessionToken.isNullOrBlank() &&
+            !csrfToken.isNullOrBlank()
+
     fun clear() = prefs.edit().clear().apply()
 
     private companion object {
-        const val KEY_ACCESS = "access_token"
         const val KEY_CSRF = "csrf_token"
         const val KEY_APP_SESSION = "app_session_token"
+        const val KEY_USER_SESSION = "user_session_token"
+        const val KEY_ACCESS = "access_token"
+        const val KEY_REFRESH = "refresh_token"
+        const val KEY_EMAIL = "user_email"
     }
 }

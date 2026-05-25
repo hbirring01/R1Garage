@@ -29,6 +29,13 @@ data class VehicleSnapshotEntity(
     val lat: Double?,
     val lon: Double?,
     @ColumnInfo(name = "twelve_volt") val twelveVolt: Double?,
+    /**
+     * Vehicle power state as reported by Rivian (`sleep`, `standby`, `ready`,
+     * `go`, …). Used by the poller to relax cadence when the car is asleep
+     * and by trip/charge detectors. Reading this from the cloud does not
+     * wake the car.
+     */
+    @ColumnInfo(name = "power_state") val powerState: String? = null,
 )
 
 @Dao
@@ -38,6 +45,10 @@ interface VehicleSnapshotDao {
 
     @Query("SELECT * FROM vehicle_snapshot ORDER BY fetched_at DESC LIMIT 1")
     suspend fun latest(): VehicleSnapshotEntity?
+
+    /** Last [limit] snapshots, newest first. Used by session detectors. */
+    @Query("SELECT * FROM vehicle_snapshot ORDER BY fetched_at DESC LIMIT :limit")
+    suspend fun recent(limit: Int): List<VehicleSnapshotEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(snapshot: VehicleSnapshotEntity): Long
