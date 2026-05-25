@@ -8,6 +8,7 @@ import com.r1garage.android.data.rivian.LoginWithOtpData
 import com.r1garage.android.data.rivian.RivianAuthApi
 import com.r1garage.android.data.rivian.RivianAuthQueries
 import com.r1garage.android.data.rivian.RivianTokenStore
+import com.r1garage.android.work.VehiclePollScheduler
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 class AuthRepository @Inject constructor(
     private val authApi: RivianAuthApi,
     private val tokenStore: RivianTokenStore,
+    private val pollScheduler: VehiclePollScheduler,
 ) {
     private val _state = MutableStateFlow<AuthState>(
         if (tokenStore.isSignedIn) AuthState.SignedIn else AuthState.SignedOut
@@ -108,6 +110,9 @@ class AuthRepository @Inject constructor(
     }
 
     fun signOut() {
+        // Stop the periodic poller first so no in-flight job races us to
+        // make a request with a token we're about to clear.
+        pollScheduler.cancel()
         tokenStore.clear()
         _state.value = AuthState.SignedOut
     }
