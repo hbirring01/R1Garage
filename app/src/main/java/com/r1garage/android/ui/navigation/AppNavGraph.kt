@@ -2,13 +2,17 @@ package com.r1garage.android.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,11 +32,19 @@ fun AppNavGraph() {
     val currentRoute = backStack?.destination?.route
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar {
+            // Flat bottom bar on the page background — no elevation tint —
+            // matches the Rivian app's edge-to-edge "the nav is part of the
+            // page" feel.
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.background,
+                tonalElevation = 0.dp,
+            ) {
                 TopDestination.entries.forEach { dest ->
+                    val selected = currentRoute == dest.route
                     NavigationBarItem(
-                        selected = currentRoute == dest.route,
+                        selected = selected,
                         onClick = {
                             nav.navigate(dest.route) {
                                 popUpTo(nav.graph.findStartDestination().id) { saveState = true }
@@ -41,7 +53,20 @@ fun AppNavGraph() {
                             }
                         },
                         icon = { Icon(dest.icon, contentDescription = dest.label) },
-                        label = { Text(dest.label) }
+                        label = {
+                            Text(
+                                dest.label,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        },
+                        alwaysShowLabel = true,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = Color.Transparent,
+                        ),
                     )
                 }
             }

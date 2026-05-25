@@ -9,6 +9,16 @@ import androidx.compose.ui.unit.sp
 private val Sans = FontFamily.Default
 
 val AppTypography = Typography(
+    // Huge numerals (battery %, range). Light weight for that "official
+    // Rivian app" telemetry feel.
+    displayLarge = TextStyle(
+        fontFamily = Sans, fontWeight = FontWeight.Light,
+        fontSize = 96.sp, lineHeight = 100.sp, letterSpacing = (-2.0).sp
+    ),
+    displayMedium = TextStyle(
+        fontFamily = Sans, fontWeight = FontWeight.Light,
+        fontSize = 56.sp, lineHeight = 64.sp, letterSpacing = (-1.0).sp
+    ),
     displaySmall = TextStyle(
         fontFamily = Sans, fontWeight = FontWeight.Medium,
         fontSize = 32.sp, lineHeight = 40.sp, letterSpacing = (-0.5).sp
