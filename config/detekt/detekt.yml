@@ -1,0 +1,13 @@
+# detekt configuration overlay.
+#
+# Merged on top of --build-upon-default-config in the Code Quality
+# workflow, so this only needs to override what the defaults get wrong.
+#
+# Why we need this: @Composable functions are PascalCase by convention
+# (Jetpack Compose Compose API guidelines), but detekt's default
+# FunctionNaming rule rejects PascalCase across the board. Telling the
+# rule to ignore @Composable-annotated functions is the standard fix.
+style:
+  FunctionNaming:
+    ignoreAnnotated:
+      - 'Composable'

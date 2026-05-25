@@ -62,6 +62,7 @@ jobs:
         run: |
           ./detekt-cli-${DETEKT_VERSION}/bin/detekt-cli \
             --build-upon-default-config \
+            --config config/detekt/detekt.yml \
             --input app/src/main \
             --report sarif:detekt-report.sarif \
           || true
