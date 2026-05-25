@@ -21,6 +21,7 @@ permissions:
   contents: write
   pull-requests: write
   id-token: write
+  actions: write
 
 concurrency:
   group: release-please-${{ github.ref }}
@@ -32,7 +33,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: googleapis/release-please-action@v5
+        id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # GITHUB_TOKEN-created tags do NOT trigger the `push: tags: v*` event,
+      # so we explicitly dispatch the APK build workflow against the new tag.
+      - name: Dispatch Release APK build for new tag
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          echo "Dispatching release.yml against tag $TAG"
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"
