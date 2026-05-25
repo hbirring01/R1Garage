@@ -160,3 +160,78 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
           files: artifacts/*.apk
+
+  update-readme:
+    name: Update README with latest release
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Rewrite Latest Release block
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          python3 <<'PY'
+          import os, re, datetime, pathlib
+
+          tag  = os.environ["TAG"]
+          repo = os.environ["REPO"]
+          date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+          apk  = f"R1Garage-{tag}.apk"
+          dl   = f"https://github.com/{repo}/releases/download/{tag}/{apk}"
+          rel  = f"https://github.com/{repo}/releases/tag/{tag}"
+
+          block = (
+              "<!-- LATEST_RELEASE:START -->\n"
+              f"### 📦 Latest release: [`{tag}`]({rel}) — {date}\n\n"
+              f"[⬇️ Download `{apk}`]({dl}) · [Release notes]({rel})\n\n"
+              "```\n"
+              f"adb install {apk}\n"
+              "```\n"
+              "<!-- LATEST_RELEASE:END -->"
+          )
+
+          p = pathlib.Path("README.md")
+          text = p.read_text(encoding="utf-8")
+          new = re.sub(
+              r"<!-- LATEST_RELEASE:START -->.*?<!-- LATEST_RELEASE:END -->",
+              block,
+              text,
+              count=1,
+              flags=re.DOTALL,
+          )
+          if new == text:
+              raise SystemExit("LATEST_RELEASE markers not found in README.md")
+          p.write_text(new, encoding="utf-8")
+          PY
+
+          echo "----- Updated README excerpt -----"
+          grep -A 6 'LATEST_RELEASE:START' README.md
+
+      - name: Open PR with README update
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          branch: chore/readme-release-${{ github.ref_name }}
+          base: main
+          commit-message: "docs: update README for ${{ github.ref_name }}"
+          title: "docs: update README for ${{ github.ref_name }}"
+          body: |
+            Automated README update after release **${{ github.ref_name }}**.
+
+            - Refreshed the `LATEST_RELEASE` block with the new tag, date, and APK download link.
+            - Triggered by the [Release APK workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+          labels: |
+            documentation
+            automated
+          delete-branch: true
+
