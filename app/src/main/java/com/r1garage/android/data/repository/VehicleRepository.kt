@@ -9,6 +9,7 @@ import com.r1garage.android.data.rivian.RivianApi
 import com.r1garage.android.data.rivian.RivianQueries
 import com.r1garage.android.data.rivian.RivianTokenStore
 import com.r1garage.android.data.rivian.UserInfoData
+import com.r1garage.android.data.rivian.VehicleImagesData
 import com.r1garage.android.data.rivian.VehicleStateData
 import com.r1garage.android.data.rivian.VehicleStateDto
 import com.r1garage.android.domain.model.VehicleSnapshot
@@ -55,7 +56,45 @@ class VehicleRepository @Inject constructor(
         tokenStore.vehicleId = first.id
         tokenStore.vehicleName = first.name?.takeUnless { it.isBlank() }
             ?: first.vehicle?.model
+
+        // Best-effort: enrich with a CDN image URL of the user's actual
+        // vehicle. Failure here is silent — Home falls back to the generic
+        // silhouette and the user can still see all telemetry.
+        runCatching { fetchAndStoreVehicleImage(first.id!!) }
         return first.id
+    }
+
+    /**
+     * Queries Rivian's image CDN for renderings that match the user's paint
+     * + wheel config, picks an exterior front 3/4 shot, and persists the
+     * URL in [tokenStore]. Caller treats failures as non-fatal.
+     */
+    private suspend fun fetchAndStoreVehicleImage(vehicleId: String) {
+        val resp = api.graphql(
+            GraphQlRequest(
+                operationName = "GetVehicleImages",
+                query = RivianQueries.GET_VEHICLE_IMAGES,
+                variables = buildJsonObject {
+                    put("extension", JsonPrimitive("webp"))
+                    put("resolution", JsonPrimitive("@2x"))
+                    put("versionNumber", JsonPrimitive(2))
+                },
+            )
+        )
+        if (resp.errors?.isNotEmpty() == true) return
+        val data = resp.data ?: return
+        val images = AuthDtosJson.decodeFromJsonElement<VehicleImagesData>(data)
+            .getVehicleImages
+            ?.filter { !it.url.isNullOrBlank() && it.vehicleId == vehicleId }
+            .orEmpty()
+        // Prefer an exterior front-3/4 hero; fall back to first exterior;
+        // finally the first usable URL of any kind.
+        val pick = images.firstOrNull {
+            it.design?.contains("front_3qtr", ignoreCase = true) == true
+        } ?: images.firstOrNull {
+            it.placement?.equals("exterior", ignoreCase = true) == true
+        } ?: images.firstOrNull()
+        tokenStore.vehicleImageUrl = pick?.url
     }
 
     /**

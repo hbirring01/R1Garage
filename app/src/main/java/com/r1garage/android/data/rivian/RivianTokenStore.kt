@@ -76,6 +76,15 @@ class RivianTokenStore @Inject constructor(
         get() = prefs.getString(KEY_VEHICLE_NAME, null)
         set(value) { prefs.edit().putString(KEY_VEHICLE_NAME, value).apply() }
 
+    /**
+     * CDN URL for the user's actual vehicle rendering (paint + wheels match
+     * their config). Optional — Home falls back to a generic silhouette when
+     * absent or the image fails to load.
+     */
+    var vehicleImageUrl: String?
+        get() = prefs.getString(KEY_VEHICLE_IMAGE_URL, null)
+        set(value) { prefs.edit().putString(KEY_VEHICLE_IMAGE_URL, value).apply() }
+
     /** True when we have enough tokens to make an authenticated consumer call. */
     val isSignedIn: Boolean
         get() = !userSessionToken.isNullOrBlank() &&
@@ -93,5 +102,6 @@ class RivianTokenStore @Inject constructor(
         const val KEY_EMAIL = "user_email"
         const val KEY_VEHICLE_ID = "vehicle_id"
         const val KEY_VEHICLE_NAME = "vehicle_name"
+        const val KEY_VEHICLE_IMAGE_URL = "vehicle_image_url"
     }
 }

@@ -27,7 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.r1garage.android.ui.components.BatteryHero
 import com.r1garage.android.ui.components.StatCard
 import com.r1garage.android.ui.components.StatusPill
-import com.r1garage.android.ui.components.VehicleSilhouette
+import com.r1garage.android.ui.components.VehicleImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,15 +47,21 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
                 .padding(horizontal = 20.dp, vertical = 20.dp),
         ) {
             // Greeting / vehicle name — small, muted. The hero readout below
-            // does the heavy lifting visually.
+            // does the heavy lifting visually. AuthGate guarantees we only
+            // reach this screen while signed in, so a null vehicleName means
+            // enrollment hasn't completed yet, not that the user is logged
+            // out — show a neutral placeholder.
             Text(
-                text = state.vehicleName ?: "Not signed in",
+                text = state.vehicleName ?: "Loading…",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(Modifier.height(20.dp))
-            VehicleSilhouette()
+            // Hero rendering of the user's actual Rivian (paint + wheels) when
+            // available; falls back to a generic silhouette while the CDN
+            // image is unknown or still loading.
+            VehicleImage(imageUrl = state.vehicleImageUrl)
             Spacer(Modifier.height(8.dp))
             BatteryHero(socPct = state.soc, rangeMi = state.rangeMi)
             Spacer(Modifier.height(28.dp))

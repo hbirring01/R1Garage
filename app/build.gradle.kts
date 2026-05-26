@@ -140,5 +140,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.security.crypto)
 
+    implementation(libs.coil.compose)
+
     testImplementation(libs.junit)
 }
