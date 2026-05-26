@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/hbirring01/R1Garage/compare/v0.1.4...v0.1.5) (2026-05-26)
+
+
+### Bug Fixes
+
+* **home:** bootstrap vehicleId after login so Home screen populates ([#25](https://github.com/hbirring01/R1Garage/issues/25)) ([ef45c35](https://github.com/hbirring01/R1Garage/commit/ef45c35ec603e5e40726d23745cad2e29c889881))
+
 ## [0.1.4](https://github.com/hbirring01/R1Garage/compare/v0.1.3...v0.1.4) (2026-05-26)
 
 
