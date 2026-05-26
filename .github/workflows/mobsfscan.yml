@@ -9,8 +9,12 @@ name: MobSF Scan
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
   schedule:
     - cron: '0 9 * * 1'
   workflow_dispatch:
