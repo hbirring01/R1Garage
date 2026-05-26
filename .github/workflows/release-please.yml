@@ -32,19 +32,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # Prefer a PAT (or GitHub App token) stored as RELEASE_PLEASE_TOKEN so
+      # that the PR / tag release-please opens triggers downstream workflows
+      # (Android CI, CodeQL, etc.). GitHub deliberately does not run
+      # `pull_request` or tag-`push` workflows for events authored by the
+      # default GITHUB_TOKEN, which is why release-please PRs sit without CI.
+      # Falls back to GITHUB_TOKEN when the secret is not configured — the
+      # release PR will still open, but its checks will need a manual nudge
+      # (empty commit / close + reopen) to run.
       - uses: googleapis/release-please-action@v5
         id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       # GITHUB_TOKEN-created tags do NOT trigger the `push: tags: v*` event,
       # so we explicitly dispatch the APK build workflow against the new tag.
+      # When RELEASE_PLEASE_TOKEN is set the tag is authored by that identity
+      # and the `push` trigger would fire on its own, but dispatching is a
+      # harmless no-op safety net either way.
       - name: Dispatch Release APK build for new tag
         if: steps.release.outputs.release_created == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.release.outputs.tag_name }}
         run: |
           echo "Dispatching release.yml against tag $TAG"
