@@ -43,4 +43,26 @@ object RivianQueries {
             }
         }
     """
+
+    /**
+     * Returns CDN URLs for the user's actual vehicle, rendered with their
+     * configured paint colour and wheels. Used to swap the placeholder
+     * silhouette on Home for a real photo of the owner's truck.
+     *
+     * Read-only — does not wake the car.
+     */
+    const val GET_VEHICLE_IMAGES = """
+        query GetVehicleImages(${'$'}extension: String, ${'$'}resolution: String, ${'$'}versionNumber: Int) {
+            getVehicleImages(extension: ${'$'}extension, resolution: ${'$'}resolution, versionNumber: ${'$'}versionNumber) {
+                orderId
+                vehicleId
+                extension
+                resolution
+                size
+                design
+                placement
+                url
+            }
+        }
+    """
 }

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val vehicleName: String? = null,
+    val vehicleImageUrl: String? = null,
     val soc: Int? = null,
     val rangeMi: Int? = null,
     val status: String? = null,
@@ -34,10 +35,14 @@ class HomeViewModel @Inject constructor(
     val state: StateFlow<HomeUiState> = repository.latestSnapshot
         .map { snap ->
             if (snap == null) {
-                HomeUiState(vehicleName = tokenStore.vehicleName)
+                HomeUiState(
+                    vehicleName = tokenStore.vehicleName,
+                    vehicleImageUrl = tokenStore.vehicleImageUrl,
+                )
             } else {
                 HomeUiState(
                     vehicleName = snap.vehicleName ?: tokenStore.vehicleName,
+                    vehicleImageUrl = tokenStore.vehicleImageUrl,
                     soc = snap.socPct,
                     rangeMi = snap.rangeMi,
                     status = snap.gear,
