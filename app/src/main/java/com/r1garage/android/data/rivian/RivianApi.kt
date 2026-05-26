@@ -71,3 +71,28 @@ data class ValueDto(
     val value: String? = null,
     val timeStamp: String? = null,
 )
+
+// --- User info / enrolled vehicles --------------------------------------
+
+@Serializable
+data class UserInfoData(val currentUser: CurrentUserDto? = null)
+
+@Serializable
+data class CurrentUserDto(
+    val id: String? = null,
+    val firstName: String? = null,
+    val vehicles: List<EnrolledVehicleDto>? = null,
+)
+
+@Serializable
+data class EnrolledVehicleDto(
+    val id: String? = null,
+    val vin: String? = null,
+    val name: String? = null,
+    val vehicle: EnrolledVehicleInnerDto? = null,
+)
+
+@Serializable
+data class EnrolledVehicleInnerDto(
+    val model: String? = null,
+)

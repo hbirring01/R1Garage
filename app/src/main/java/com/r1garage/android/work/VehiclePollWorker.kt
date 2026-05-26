@@ -57,10 +57,13 @@ class VehiclePollWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val vehicleId = inputData.getString(KEY_VEHICLE_ID) ?: VEHICLE_ID_PLACEHOLDER
-        if (!tokenStore.isSignedIn || vehicleId == VEHICLE_ID_PLACEHOLDER) {
-            // Not signed in yet — treat as soft success so WorkManager doesn't
-            // back off. The UI will show "Not signed in" until the user logs in.
+        val vehicleId = inputData.getString(KEY_VEHICLE_ID)
+            ?.takeUnless { it == VEHICLE_ID_PLACEHOLDER || it.isBlank() }
+            ?: tokenStore.vehicleId
+        if (!tokenStore.isSignedIn || vehicleId.isNullOrBlank()) {
+            // Not signed in / no vehicle enrolled yet — treat as soft success
+            // so WorkManager doesn't back off. The UI will pick up data once
+            // the user signs in and HomeViewModel runs enrollment.
             return Result.success()
         }
 

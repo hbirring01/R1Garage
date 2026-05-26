@@ -3,11 +3,11 @@ package com.r1garage.android.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.r1garage.android.data.repository.VehicleRepository
+import com.r1garage.android.data.rivian.RivianTokenStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.DateFormat
 import java.util.Date
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,16 +27,17 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    repository: VehicleRepository,
+    private val repository: VehicleRepository,
+    private val tokenStore: RivianTokenStore,
 ) : ViewModel() {
 
     val state: StateFlow<HomeUiState> = repository.latestSnapshot
         .map { snap ->
             if (snap == null) {
-                HomeUiState()
+                HomeUiState(vehicleName = tokenStore.vehicleName)
             } else {
                 HomeUiState(
-                    vehicleName = snap.vehicleName,
+                    vehicleName = snap.vehicleName ?: tokenStore.vehicleName,
                     soc = snap.socPct,
                     rangeMi = snap.rangeMi,
                     status = snap.gear,
@@ -50,25 +51,46 @@ class HomeViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    init {
+        // On first composition after sign-in we may not yet have a vehicleId.
+        // Discover it (one-shot) and pull an initial snapshot so the Home
+        // screen isn't empty. Failures stay silent — pull-to-refresh will
+        // retry, and the periodic poller will catch up too.
+        if (tokenStore.isSignedIn) {
+            viewModelScope.launch { bootstrapAndRefresh() }
+        }
+    }
+
     /**
-     * Pull-to-refresh handler.
-     *
-     * TODO: wire this through to [VehicleRepository.refresh] once we have
-     * a `vehicleId` source. The periodic poller currently relies on the
-     * same missing piece (see `VehiclePollWorker.VEHICLE_ID_PLACEHOLDER`),
-     * so plumbing both at once is the right move. For now this just
-     * pulses the spinner so the UX pattern is in place — the cached
-     * snapshot flow will still surface any fresh data the poller writes.
+     * Pull-to-refresh handler. Triggers an enrollment lookup if needed,
+     * then fetches a fresh `vehicleState`.
      */
     fun onRefresh() {
         if (_isRefreshing.value) return
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                delay(900)
+                bootstrapAndRefresh()
             } finally {
                 _isRefreshing.value = false
             }
+        }
+    }
+
+    private suspend fun bootstrapAndRefresh() {
+        if (!tokenStore.isSignedIn) return
+        val vehicleId = try {
+            tokenStore.vehicleId ?: repository.enrollFirstVehicle()
+        } catch (t: Throwable) {
+            // Enrollment failed (likely transient auth/network) — caller will
+            // see stale data and may retry via pull-to-refresh.
+            return
+        } ?: return
+        try {
+            repository.refresh(vehicleId)
+        } catch (_: Throwable) {
+            // Surfaced elsewhere via the alert table; swallow here so the
+            // refresh spinner doesn't get stuck.
         }
     }
 }
