@@ -7,8 +7,6 @@ on:
       - 'README.md'
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - 'README.md'
 
 concurrency:
   group: android-ci-${{ github.ref }}
@@ -16,35 +14,60 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Detect README-only PR
+        id: skip
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files=$(gh pr view "$PR_NUM" --repo "$REPO" --json files --jq '.files[].path' | sort -u)
+          echo "Changed files:"; echo "$files"
+          if [ "$files" = "README.md" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::README-only PR — skipping build"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v6
+        if: steps.skip.outputs.skip != 'true'
 
       - name: Validate Gradle wrapper
+        if: steps.skip.outputs.skip != 'true'
         uses: gradle/actions/wrapper-validation@v6
 
       - name: Set up JDK 17
+        if: steps.skip.outputs.skip != 'true'
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Set up Gradle
+        if: steps.skip.outputs.skip != 'true'
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Make gradlew executable
+        if: steps.skip.outputs.skip != 'true'
         run: chmod +x ./gradlew
 
       - name: Lint + unit tests + assemble debug
+        if: steps.skip.outputs.skip != 'true'
         run: ./gradlew lintDebug testDebugUnitTest assembleDebug
 
       - name: Upload debug APK
+        if: steps.skip.outputs.skip != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: app-debug
@@ -54,7 +77,7 @@ jobs:
           compression-level: 9
 
       - name: APK summary
-        if: success()
+        if: success() && steps.skip.outputs.skip != 'true'
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
           SIZE=$(du -h "$APK" | cut -f1)
@@ -70,7 +93,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload lint + test reports on failure
-        if: failure()
+        if: failure() && steps.skip.outputs.skip != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: reports
@@ -90,8 +113,27 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: Detect README-only PR
+        id: skip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files=$(gh pr view "$PR_NUM" --repo "$REPO" --json files --jq '.files[].path' | sort -u)
+          echo "Changed files:"; echo "$files"
+          if [ "$files" = "README.md" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::README-only PR — skipping dependency review"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v6
+        if: steps.skip.outputs.skip != 'true'
+
       - uses: actions/dependency-review-action@v5
+        if: steps.skip.outputs.skip != 'true'
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure

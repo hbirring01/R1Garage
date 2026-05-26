@@ -3,8 +3,6 @@ name: Code Quality
 on:
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - 'README.md'
   push:
     branches: [ main ]
     paths-ignore:
@@ -27,8 +25,28 @@ jobs:
     timeout-minutes: 10
     continue-on-error: true
     steps:
+      - name: Detect README-only PR
+        id: skip
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files=$(gh pr view "$PR_NUM" --repo "$REPO" --json files --jq '.files[].path' | sort -u)
+          echo "Changed files:"; echo "$files"
+          if [ "$files" = "README.md" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::README-only PR — skipping ktlint"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v6
+        if: steps.skip.outputs.skip != 'true'
+
       - name: ktlint
+        if: steps.skip.outputs.skip != 'true'
         uses: ScaCap/action-ktlint@26c5e9b625966139d9956cbbb6217375480d4e14 # v1.9.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -44,25 +62,50 @@ jobs:
     env:
       DETEKT_VERSION: 1.23.7
     steps:
+      - name: Detect README-only PR
+        id: skip
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files=$(gh pr view "$PR_NUM" --repo "$REPO" --json files --jq '.files[].path' | sort -u)
+          echo "Changed files:"; echo "$files"
+          if [ "$files" = "README.md" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::README-only PR — skipping detekt"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v6
+        if: steps.skip.outputs.skip != 'true'
+
       - name: Set up JDK 17
+        if: steps.skip.outputs.skip != 'true'
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
+
       - name: Cache detekt CLI
+        if: steps.skip.outputs.skip != 'true'
         id: cache-detekt
         uses: actions/cache@v5
         with:
           path: detekt-cli-${{ env.DETEKT_VERSION }}
           key: detekt-cli-${{ env.DETEKT_VERSION }}-${{ runner.os }}
+
       - name: Download detekt
-        if: steps.cache-detekt.outputs.cache-hit != 'true'
+        if: steps.skip.outputs.skip != 'true' && steps.cache-detekt.outputs.cache-hit != 'true'
         run: |
           curl -sSLO "https://github.com/detekt/detekt/releases/download/v${DETEKT_VERSION}/detekt-cli-${DETEKT_VERSION}.zip"
           unzip -q detekt-cli-${DETEKT_VERSION}.zip
           chmod +x detekt-cli-${DETEKT_VERSION}/bin/detekt-cli
+
       - name: Run detekt
+        if: steps.skip.outputs.skip != 'true'
         run: |
           ./detekt-cli-${DETEKT_VERSION}/bin/detekt-cli \
             --build-upon-default-config \
@@ -70,8 +113,9 @@ jobs:
             --input app/src/main \
             --report sarif:detekt-report.sarif \
           || true
+
       - name: Upload SARIF
-        if: always()
+        if: always() && steps.skip.outputs.skip != 'true'
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: detekt-report.sarif

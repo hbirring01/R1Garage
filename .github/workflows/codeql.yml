@@ -7,8 +7,6 @@ on:
       - 'README.md'
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - 'README.md'
   schedule:
     - cron: '0 6 * * 1'
 
@@ -19,6 +17,7 @@ concurrency:
 permissions:
   actions: read
   contents: read
+  pull-requests: read
   security-events: write
 
 jobs:
@@ -28,20 +27,41 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      - name: Detect README-only PR
+        id: skip
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files=$(gh pr view "$PR_NUM" --repo "$REPO" --json files --jq '.files[].path' | sort -u)
+          echo "Changed files:"; echo "$files"
+          if [ "$files" = "README.md" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::README-only PR — skipping CodeQL analysis"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v6
+        if: steps.skip.outputs.skip != 'true'
 
       - name: Set up JDK 17
+        if: steps.skip.outputs.skip != 'true'
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Set up Gradle
+        if: steps.skip.outputs.skip != 'true'
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Initialize CodeQL
+        if: steps.skip.outputs.skip != 'true'
         uses: github/codeql-action/init@v4
         with:
           languages: java-kotlin
@@ -49,12 +69,15 @@ jobs:
           queries: security-extended
 
       - name: Make gradlew executable
+        if: steps.skip.outputs.skip != 'true'
         run: chmod +x ./gradlew
 
       - name: Build
+        if: steps.skip.outputs.skip != 'true'
         run: ./gradlew clean assembleDebug --no-build-cache
 
       - name: Perform CodeQL Analysis
+        if: steps.skip.outputs.skip != 'true'
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:java-kotlin"
