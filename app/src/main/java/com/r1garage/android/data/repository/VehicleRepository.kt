@@ -65,6 +65,17 @@ class VehicleRepository @Inject constructor(
     }
 
     /**
+     * Public entry point so callers (e.g. HomeViewModel on upgrade) can
+     * backfill the vehicle image when [RivianTokenStore.vehicleImageUrl] is
+     * missing but [RivianTokenStore.vehicleId] is already cached — in that
+     * case [enrollFirstVehicle] is skipped and the image would otherwise
+     * never be fetched.
+     */
+    suspend fun refreshVehicleImage(vehicleId: String) {
+        fetchAndStoreVehicleImage(vehicleId)
+    }
+
+    /**
      * Queries Rivian's image CDN for renderings that match the user's paint
      * + wheel config, picks an exterior front 3/4 shot, and persists the
      * URL in [tokenStore]. Caller treats failures as non-fatal.
@@ -83,10 +94,16 @@ class VehicleRepository @Inject constructor(
         )
         if (resp.errors?.isNotEmpty() == true) return
         val data = resp.data ?: return
-        val images = AuthDtosJson.decodeFromJsonElement<VehicleImagesData>(data)
+        val allImages = AuthDtosJson.decodeFromJsonElement<VehicleImagesData>(data)
             .getVehicleImages
-            ?.filter { !it.url.isNullOrBlank() && it.vehicleId == vehicleId }
+            ?.filter { !it.url.isNullOrBlank() }
             .orEmpty()
+        // Only narrow by vehicleId if the response actually carries one —
+        // some account-scoped responses omit it, in which case dropping all
+        // images leaves the user with no hero. When at least one image has a
+        // matching vehicleId, trust the narrowed set.
+        val scoped = allImages.filter { it.vehicleId == vehicleId }
+        val images = if (scoped.isNotEmpty()) scoped else allImages
         // Prefer an exterior front-3/4 hero; fall back to first exterior;
         // finally the first usable URL of any kind.
         val pick = images.firstOrNull {
