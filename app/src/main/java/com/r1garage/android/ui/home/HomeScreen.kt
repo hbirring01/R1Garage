@@ -47,9 +47,12 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
                 .padding(horizontal = 20.dp, vertical = 20.dp),
         ) {
             // Greeting / vehicle name — small, muted. The hero readout below
-            // does the heavy lifting visually.
+            // does the heavy lifting visually. AuthGate guarantees we only
+            // reach this screen while signed in, so a null vehicleName means
+            // enrollment hasn't completed yet, not that the user is logged
+            // out — show a neutral placeholder.
             Text(
-                text = state.vehicleName ?: "Not signed in",
+                text = state.vehicleName ?: "Loading…",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
