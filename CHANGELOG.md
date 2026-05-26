@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/hbirring01/R1Garage/compare/v0.1.3...v0.1.4) (2026-05-26)
+
+
+### Features
+
+* **home:** real Rivian hero image + Loading copy fix ([#20](https://github.com/hbirring01/R1Garage/issues/20)) ([d4d3eab](https://github.com/hbirring01/R1Garage/commit/d4d3eababed0bcf3fd777fc98eabd38b0d3fb66b))
+
 ## [0.1.3](https://github.com/hbirring01/R1Garage/compare/v0.1.2...v0.1.3) (2026-05-26)
 
 
