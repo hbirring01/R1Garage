@@ -10,12 +10,12 @@
 Personal ownership dashboard for the Rivian R1S (Android).
 
 <!-- LATEST_RELEASE:START -->
-### 📦 Latest release: [`v0.1.4`](https://github.com/hbirring01/R1Garage/releases/tag/v0.1.4) — 2026-05-26
+### 📦 Latest release: [`v0.1.5`](https://github.com/hbirring01/R1Garage/releases/tag/v0.1.5) — 2026-05-26
 
-[⬇️ Download `R1Garage-v0.1.4.apk`](https://github.com/hbirring01/R1Garage/releases/download/v0.1.4/R1Garage-v0.1.4.apk) · [Release notes](https://github.com/hbirring01/R1Garage/releases/tag/v0.1.4)
+[⬇️ Download `R1Garage-v0.1.5.apk`](https://github.com/hbirring01/R1Garage/releases/download/v0.1.5/R1Garage-v0.1.5.apk) · [Release notes](https://github.com/hbirring01/R1Garage/releases/tag/v0.1.5)
 
 ```
-adb install R1Garage-v0.1.4.apk
+adb install R1Garage-v0.1.5.apk
 ```
 <!-- LATEST_RELEASE:END -->
 
