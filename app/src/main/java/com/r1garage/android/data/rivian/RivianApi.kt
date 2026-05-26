@@ -96,3 +96,24 @@ data class EnrolledVehicleDto(
 data class EnrolledVehicleInnerDto(
     val model: String? = null,
 )
+
+// --- Vehicle image CDN response ----------------------------------------
+
+@Serializable
+data class VehicleImagesData(
+    val getVehicleImages: List<VehicleImageDto>? = null,
+)
+
+@Serializable
+data class VehicleImageDto(
+    val orderId: String? = null,
+    val vehicleId: String? = null,
+    val extension: String? = null,
+    val resolution: String? = null,
+    val size: String? = null,
+    /** e.g. "main_exterior_front_3qtr" */
+    val design: String? = null,
+    /** e.g. "exterior", "interior" */
+    val placement: String? = null,
+    val url: String? = null,
+)
