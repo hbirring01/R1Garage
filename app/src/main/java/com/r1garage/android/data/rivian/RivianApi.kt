@@ -6,10 +6,12 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 /**
- * Rivian's consumer endpoint is a GraphQL gateway. The signed-in queries
- * (vehicle state, vehicle list, charging history) live here.
+ * Rivian's GraphQL gateway. All authenticated queries (vehicle state,
+ * user info, vehicle images) go through the same endpoint as login —
+ * there is no separate `/consumer/graphql` endpoint, and hitting one
+ * returns 404.
  *
- * Base URL: https://rivian.com/api/gql/consumer/
+ * Base URL: https://rivian.com/api/gql/gateway/
  *
  * Auth tokens (Csrf-Token / A-Sess / U-Sess) are attached by
  * [RivianAuthInterceptor]; this interface stays pure transport.

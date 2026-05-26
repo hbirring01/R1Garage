@@ -20,7 +20,10 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val RIVIAN_CONSUMER_URL = "https://rivian.com/api/gql/consumer/"
+    // All authenticated GraphQL queries (vehicleState / getUserInfo /
+    // getVehicleImages) go through the same gateway endpoint as login —
+    // there is no separate `/consumer/graphql` endpoint, and hitting it
+    // returns 404.  See https://github.com/bretterer/rivian-python-client.
     private const val RIVIAN_GATEWAY_URL = "https://rivian.com/api/gql/gateway/"
 
     @Provides
@@ -49,7 +52,7 @@ object NetworkModule {
     fun provideRivianApi(client: OkHttpClient, json: Json): RivianApi {
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
-            .baseUrl(RIVIAN_CONSUMER_URL)
+            .baseUrl(RIVIAN_GATEWAY_URL)
             .client(client)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()

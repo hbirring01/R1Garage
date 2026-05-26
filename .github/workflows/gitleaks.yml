@@ -3,6 +3,8 @@ name: Gitleaks
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
   pull_request:
     branches: [main]
   schedule:
@@ -23,11 +25,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Detect README-only PR
+        id: skip
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files=$(gh pr view "$PR_NUM" --repo "$REPO" --json files --jq '.files[].path' | sort -u)
+          echo "Changed files:"; echo "$files"
+          if [ "$files" = "README.md" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::README-only PR — skipping gitleaks"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v6
+        if: steps.skip.outputs.skip != 'true'
         with:
           fetch-depth: 0
 
       - name: Run gitleaks
+        if: steps.skip.outputs.skip != 'true'
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
