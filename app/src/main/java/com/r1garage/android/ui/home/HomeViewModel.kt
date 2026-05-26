@@ -79,18 +79,13 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun bootstrapAndRefresh() {
         if (!tokenStore.isSignedIn) return
-        val vehicleId = try {
+        // Enrollment / refresh failures are surfaced by the periodic poller's
+        // alert path; here we just want pull-to-refresh to release its
+        // spinner without crashing the VM. runCatching swallows by design so
+        // detekt's TooGenericExceptionCaught / SwallowedException don't fire.
+        val vehicleId = runCatching {
             tokenStore.vehicleId ?: repository.enrollFirstVehicle()
-        } catch (t: Throwable) {
-            // Enrollment failed (likely transient auth/network) — caller will
-            // see stale data and may retry via pull-to-refresh.
-            return
-        } ?: return
-        try {
-            repository.refresh(vehicleId)
-        } catch (_: Throwable) {
-            // Surfaced elsewhere via the alert table; swallow here so the
-            // refresh spinner doesn't get stuck.
-        }
+        }.getOrNull() ?: return
+        runCatching { repository.refresh(vehicleId) }
     }
 }

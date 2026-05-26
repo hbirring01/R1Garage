@@ -46,12 +46,11 @@ class VehicleRepository @Inject constructor(
                 variables = JsonObject(emptyMap()),
             )
         )
-        resp.errors?.firstOrNull()?.let {
-            throw IllegalStateException(it.message)
-        }
-        val data = resp.data ?: throw IllegalStateException("no data in user info response")
-        val user = AuthDtosJson.decodeFromJsonElement<UserInfoData>(data).currentUser
-            ?: throw IllegalStateException("no currentUser in response")
+        resp.errors?.firstOrNull()?.let { error(it.message) }
+        val data = checkNotNull(resp.data) { "no data in user info response" }
+        val user = checkNotNull(
+            AuthDtosJson.decodeFromJsonElement<UserInfoData>(data).currentUser
+        ) { "no currentUser in response" }
         val first = user.vehicles?.firstOrNull { !it.id.isNullOrBlank() } ?: return null
         tokenStore.vehicleId = first.id
         tokenStore.vehicleName = first.name?.takeUnless { it.isBlank() }
@@ -74,12 +73,11 @@ class VehicleRepository @Inject constructor(
                 }
             )
         )
-        response.errors?.firstOrNull()?.let {
-            throw IllegalStateException(it.message)
-        }
-        val data = response.data ?: throw IllegalStateException("no data in response")
-        val state = AuthDtosJson.decodeFromJsonElement<VehicleStateData>(data).vehicleState
-            ?: throw IllegalStateException("no vehicleState in response")
+        response.errors?.firstOrNull()?.let { error(it.message) }
+        val data = checkNotNull(response.data) { "no data in response" }
+        val state = checkNotNull(
+            AuthDtosJson.decodeFromJsonElement<VehicleStateData>(data).vehicleState
+        ) { "no vehicleState in response" }
         snapshotDao.insert(state.toEntity(System.currentTimeMillis(), tokenStore.vehicleName))
 
         // Run trip / charge session detection against the snapshot we just
