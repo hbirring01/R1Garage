@@ -12,9 +12,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/** Standard top-of-screen header used across the pillar screens. */
+/**
+ * Standard top-of-screen header used across the pillar screens. The title
+ * is rendered in a lighter, larger weight to mirror the Rivian app's
+ * understated section headers, with the muted subtitle directly beneath.
+ */
 @Composable
 fun ScreenScaffold(
     title: String,
@@ -25,19 +30,24 @@ fun ScreenScaffold(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(horizontal = 20.dp, vertical = 20.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
+        Text(
+            title,
+            style = MaterialTheme.typography.displaySmall.copy(
+                fontWeight = FontWeight.Light,
+            ),
+        )
         if (subtitle != null) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
         content()
     }
 }

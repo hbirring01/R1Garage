@@ -62,6 +62,20 @@ class RivianTokenStore @Inject constructor(
         get() = prefs.getString(KEY_EMAIL, null)
         set(value) { prefs.edit().putString(KEY_EMAIL, value).apply() }
 
+    /**
+     * Discovered once per session via `GetUserInfo`. Every vehicle-scoped
+     * query needs it. Not encrypted-sensitive on its own, but kept here for
+     * lifecycle parity with the rest of the session.
+     */
+    var vehicleId: String?
+        get() = prefs.getString(KEY_VEHICLE_ID, null)
+        set(value) { prefs.edit().putString(KEY_VEHICLE_ID, value).apply() }
+
+    /** Friendly vehicle name (user-set in Rivian app) or model fallback. */
+    var vehicleName: String?
+        get() = prefs.getString(KEY_VEHICLE_NAME, null)
+        set(value) { prefs.edit().putString(KEY_VEHICLE_NAME, value).apply() }
+
     /** True when we have enough tokens to make an authenticated consumer call. */
     val isSignedIn: Boolean
         get() = !userSessionToken.isNullOrBlank() &&
@@ -77,5 +91,7 @@ class RivianTokenStore @Inject constructor(
         const val KEY_ACCESS = "access_token"
         const val KEY_REFRESH = "refresh_token"
         const val KEY_EMAIL = "user_email"
+        const val KEY_VEHICLE_ID = "vehicle_id"
+        const val KEY_VEHICLE_NAME = "vehicle_name"
     }
 }
