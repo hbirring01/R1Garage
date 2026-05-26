@@ -7,11 +7,14 @@ import com.r1garage.android.data.rivian.AuthDtosJson
 import com.r1garage.android.data.rivian.GraphQlRequest
 import com.r1garage.android.data.rivian.RivianApi
 import com.r1garage.android.data.rivian.RivianQueries
+import com.r1garage.android.data.rivian.RivianTokenStore
+import com.r1garage.android.data.rivian.UserInfoData
 import com.r1garage.android.data.rivian.VehicleStateData
 import com.r1garage.android.data.rivian.VehicleStateDto
 import com.r1garage.android.domain.model.VehicleSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -23,9 +26,37 @@ class VehicleRepository @Inject constructor(
     private val api: RivianApi,
     private val snapshotDao: VehicleSnapshotDao,
     private val sessionDetector: SessionDetector,
+    private val tokenStore: RivianTokenStore,
 ) {
     val latestSnapshot: Flow<VehicleSnapshot?> =
         snapshotDao.observeLatest().map { it?.toDomain() }
+
+    /**
+     * Discovers the signed-in user's enrolled vehicles and persists the
+     * first one's id/name. Read-only — does not wake the car.
+     *
+     * Returns the discovered vehicleId, or null if the account has none.
+     * Throws on transport / GraphQL errors so callers can surface them.
+     */
+    suspend fun enrollFirstVehicle(): String? {
+        val resp = api.graphql(
+            GraphQlRequest(
+                operationName = "GetUserInfo",
+                query = RivianQueries.GET_USER_INFO,
+                variables = JsonObject(emptyMap()),
+            )
+        )
+        resp.errors?.firstOrNull()?.let { error(it.message) }
+        val data = checkNotNull(resp.data) { "no data in user info response" }
+        val user = checkNotNull(
+            AuthDtosJson.decodeFromJsonElement<UserInfoData>(data).currentUser
+        ) { "no currentUser in response" }
+        val first = user.vehicles?.firstOrNull { !it.id.isNullOrBlank() } ?: return null
+        tokenStore.vehicleId = first.id
+        tokenStore.vehicleName = first.name?.takeUnless { it.isBlank() }
+            ?: first.vehicle?.model
+        return first.id
+    }
 
     /**
      * Fetches a fresh snapshot and persists it. Throws when not authenticated
@@ -42,13 +73,12 @@ class VehicleRepository @Inject constructor(
                 }
             )
         )
-        response.errors?.firstOrNull()?.let {
-            throw IllegalStateException(it.message)
-        }
-        val data = response.data ?: throw IllegalStateException("no data in response")
-        val state = AuthDtosJson.decodeFromJsonElement<VehicleStateData>(data).vehicleState
-            ?: throw IllegalStateException("no vehicleState in response")
-        snapshotDao.insert(state.toEntity(System.currentTimeMillis()))
+        response.errors?.firstOrNull()?.let { error(it.message) }
+        val data = checkNotNull(response.data) { "no data in response" }
+        val state = checkNotNull(
+            AuthDtosJson.decodeFromJsonElement<VehicleStateData>(data).vehicleState
+        ) { "no vehicleState in response" }
+        snapshotDao.insert(state.toEntity(System.currentTimeMillis(), tokenStore.vehicleName))
 
         // Run trip / charge session detection against the snapshot we just
         // inserted. Worst case the detector no-ops; it never wakes the car.
@@ -69,9 +99,9 @@ class VehicleRepository @Inject constructor(
     }
 }
 
-private fun VehicleStateDto.toEntity(now: Long) = VehicleSnapshotEntity(
+private fun VehicleStateDto.toEntity(now: Long, vehicleName: String?) = VehicleSnapshotEntity(
     fetchedAt = now,
-    vehicleName = null,
+    vehicleName = vehicleName,
     socPct = batteryLevel?.value?.toDoubleOrNull()?.toInt(),
     rangeMi = distanceToEmpty?.value?.toDoubleOrNull()?.let { kmToMi(it) },
     odometerMi = vehicleMileage?.value?.toDoubleOrNull()?.let { kmToMi(it) },
