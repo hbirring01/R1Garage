@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/hbirring01/R1Garage/compare/v0.1.6...v0.1.7) (2026-05-26)
+
+
+### Bug Fixes
+
+* **api:** route signed-in GraphQL queries to /gateway/ — /consumer/ is 404 ([#31](https://github.com/hbirring01/R1Garage/issues/31)) ([0d4e4a9](https://github.com/hbirring01/R1Garage/commit/0d4e4a92f2523f52f953f7540cc1bccb0fd9856f))
+
 ## [0.1.6](https://github.com/hbirring01/R1Garage/compare/v0.1.5...v0.1.6) (2026-05-26)
 
 
