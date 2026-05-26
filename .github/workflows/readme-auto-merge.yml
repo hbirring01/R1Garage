@@ -1,0 +1,66 @@
+name: README auto-merge
+
+# Auto-approves and enables auto-merge (squash) on PRs that touch ONLY
+# README.md. Combined with `paths-ignore: README.md` on the heavy
+# workflows (Android CI, CodeQL, gitleaks, mobsfscan, code-quality),
+# README-only PRs sail through with no checks to wait on.
+#
+# Requires repo setting: Settings → General → "Allow auto-merge" enabled.
+#
+# Note: GitHub does not let an author approve their own PR. When the PR
+# is opened by the repo owner the `gh pr review --approve` step is a
+# no-op (caught with `|| true`), but `gh pr merge --auto` still arms
+# auto-merge — the PR will merge as soon as required checks (if any)
+# pass.
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'README.md'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: readme-auto-merge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify only README.md changed
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          files=$(gh pr view "$PR_NUM" --repo "$REPO" --json files --jq '.files[].path' | sort -u)
+          echo "Changed files:"
+          echo "$files"
+          if [ "$files" = "README.md" ]; then
+            echo "only_readme=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "only_readme=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Approve PR
+        if: steps.check.outputs.only_readme == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr review --approve "$PR_URL" || true
+
+      - name: Enable auto-merge (squash)
+        if: steps.check.outputs.only_readme == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
