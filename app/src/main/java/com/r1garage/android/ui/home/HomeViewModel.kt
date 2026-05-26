@@ -59,7 +59,7 @@ class HomeViewModel @Inject constructor(
                 errorMessage = err,
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STATE_SUBSCRIPTION_TIMEOUT_MS), HomeUiState())
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -126,5 +126,15 @@ class HomeViewModel @Inject constructor(
         } catch (t: Throwable) {
             _error.value = "Couldn't fetch vehicle status: ${t.message ?: t.javaClass.simpleName}"
         }
+    }
+
+    private companion object {
+        /**
+         * Keep the upstream snapshot/error flows hot for 5s after the last
+         * subscriber goes away — long enough to survive a config change
+         * without re-subscribing, short enough to release resources when
+         * the user backs out of Home.
+         */
+        const val STATE_SUBSCRIPTION_TIMEOUT_MS = 5_000L
     }
 }
