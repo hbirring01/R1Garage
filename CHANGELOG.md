@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/hbirring01/R1Garage/compare/v0.1.5...v0.1.6) (2026-05-26)
+
+
+### Bug Fixes
+
+* **home:** backfill vehicle image on upgrade and surface refresh errors ([#28](https://github.com/hbirring01/R1Garage/issues/28)) ([eb23402](https://github.com/hbirring01/R1Garage/commit/eb23402749faa52bddd38ab7c0f684d468fa7811))
+
 ## [0.1.5](https://github.com/hbirring01/R1Garage/compare/v0.1.4...v0.1.5) (2026-05-26)
 
 
