@@ -1,7 +1,6 @@
 package com.r1garage.android.ui.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -14,12 +13,16 @@ import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 
+/** Fixed hero height; matches the visual weight of [VehicleSilhouette]. */
+private val HERO_HEIGHT_DP = 120.dp
+
 /**
  * Hero image at the top of Home. Shows the owner's actual Rivian (paint +
  * wheels matched to their config) via Rivian's CDN when [imageUrl] is
  * available; falls back to the generic [VehicleSilhouette] while loading or
  * on any error so the layout never collapses.
  */
+@Suppress("FunctionNaming") // Composable, PascalCase by Compose convention.
 @Composable
 fun VehicleImage(
     imageUrl: String?,
@@ -46,8 +49,7 @@ fun VehicleImage(
             contentScale = ContentScale.Fit,
             modifier = modifier
                 .fillMaxWidth()
-                .height(120.dp)
-                .aspectRatio(2.4f, matchHeightConstraintsFirst = false),
+                .height(HERO_HEIGHT_DP),
         )
     } else {
         VehicleSilhouette(modifier = modifier)
