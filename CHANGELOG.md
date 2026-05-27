@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/hbirring01/R1Garage/compare/v0.1.7...v0.1.8) (2026-05-27)
+
+
+### Bug Fixes
+
+* **api:** tolerate non-string `value` fields in vehicleState ([#35](https://github.com/hbirring01/R1Garage/issues/35)) ([4ed6c23](https://github.com/hbirring01/R1Garage/commit/4ed6c23e042e35df13752843c7d25adc7f3a5f87))
+
 ## [0.1.7](https://github.com/hbirring01/R1Garage/compare/v0.1.6...v0.1.7) (2026-05-26)
 
 
