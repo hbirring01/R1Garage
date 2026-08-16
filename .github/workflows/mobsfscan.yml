@@ -53,7 +53,7 @@ jobs:
 
       - name: Run mobsfscan
         if: steps.skip.outputs.skip != 'true'
-        uses: MobSF/mobsfscan@3d87bc570c4614d705547bddb521395663dba353 # 0.4.5
+        uses: MobSF/mobsfscan@a43635d92434e78b079ed7d860f022cf6c886b43 # 1.0.0
         with:
           args: '. --sarif --output mobsfscan.sarif || true'
 
